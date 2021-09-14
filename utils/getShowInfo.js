@@ -1,8 +1,6 @@
 const https = require('https')
-const fs = require('fs')
-const {
-    nanoid
-} = require('nanoid')
+const ErrorResponse = require('./errorResponse')
+const constants = require('./constants.js')
 const keywordMatchAnalyzer = require('../utils/keywordMatchAnalyzer.js')
 
 function getShowInfo({
@@ -10,6 +8,13 @@ function getShowInfo({
     categoryId,
     categoryString
 }) {
+
+    // Default showId in case no showId was provided
+    if (!showId) showId = process.env.DEFAULT_SHOWID || 'The Good Doctor'
+    // Default categoryId in case no categoryId was provided
+    if (!categoryId || categoryId.length === 0) categoryId = process.env.DEFAULT_CATEGORY_ID || [167] // Flashing lights as of 11/09/2021
+    // categoryString is optional
+    
     const option = {
         hostname: 'www.doesthedogdie.com',
         path: `/media/${showId}`,
@@ -20,44 +25,45 @@ function getShowInfo({
     }
 
     let responseChunk = []
+    let data
 
     const request = https.request(option, (response) => {
         response.on('data', data => {
             responseChunk.push(data)
         }).on('end', async () => {
-            let data = JSON.parse(Buffer.concat(responseChunk).toString())
-            if (!fs.existsSync('./showData')) {
-                fs.mkdirSync('./showData');
-            }
-            const title = `${data['item']['name'].replace(/\s/g, '').toLowerCase()}_${data['item']['id']}_${nanoid(10)}`
-
-            if (categoryId) {
-                fs.writeFileSync(`./showData/${title}.json`, JSON.stringify(categoryScrapper(data['topicItemStats'], categoryId)))
-                return console.log('Using category ID by default')
-            }
-
-            fs.writeFileSync(`./showData/${title}.json`, JSON.stringify(categoryKeywordScrapper(data['topicItemStats'], categoryString)))
-
-            return console.log('Action completed')
+            data = JSON.parse(Buffer.concat(responseChunk).toString())
         })
 
         response.on('error', error => {
-            console.error(error)
-            process.exit(1)
+            return new Promise((_, reject) => {
+                reject(error)
+            })
+        })
+    })
+
+    request.on('error', error => {
+        return new Promise((_, reject) => {
+            reject(error)
         })
     })
 
     request.end()
+
+    return new Promise((resolve, reject) => {
+        setTimeout(() => {
+            if (!data) {
+                return reject(ErrorResponse(null, constants.statusCodes.SERVICEUNAVAILABLE, constants.errorCodes.E0001, 'API failed to provide data on time'))
+            }
+            if (categoryString) {
+                return resolve(categoryKeywordScrapper(data['topicItemStats'], categoryString))
+            }
+            resolve(categoryScrapper(data['topicItemStats'], categoryId))
+        }, 3000)
+    })
 }
 
 function categoryScrapper(array, category) {
     let resultArray = []
-    if (!category) {
-        category = [167] // Flashing lights as of 11/09/2021
-    }
-    if (category.length === 0) {
-        category = [167] // Flashing lights as of 11/09/2021
-    }
     for (let i = 0; i < array.length; i++) {
         if (category.includes(array[i]['TopicId'])) {
             resultArray.push({
@@ -71,9 +77,6 @@ function categoryScrapper(array, category) {
 function categoryKeywordScrapper(array, categoryString) {
     let sortingArray = []
     let resultArray = []
-    if (!categoryString) {
-        categoryString = 'flash'
-    }
     let closeMatch = []
     sortingArray.push(...keywordMatchAnalyzer(categoryString))
 

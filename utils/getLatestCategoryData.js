@@ -1,9 +1,13 @@
 const https = require('https')
-const fs = require('fs')
+const ErrorResponse = require('./errorResponse')
+const constants = require('./constants.js')
 
-function getLatestCategoryData({
+async function getLatestCategoryData({
     showId
 }) {
+    // Default showId in case no showId was provided
+    if (!showId) showId = process.env.DEFAULT_SHOWID || 13397
+
     const option = {
         hostname: 'www.doesthedogdie.com',
         path: `/media/${showId}`,
@@ -14,22 +18,40 @@ function getLatestCategoryData({
     }
 
     let responseChunk = []
+    let data
 
     const request = https.request(option, (response) => {
         response.on('data', data => {
             responseChunk.push(data)
         }).on('end', async () => {
-            let data = JSON.parse(Buffer.concat(responseChunk).toString())
-            fs.writeFileSync(`./categoryDictionary.json`, JSON.stringify(topicIdScrapper(data['topicItemStats'])))
+            data = JSON.parse(Buffer.concat(responseChunk).toString())
+            data = topicIdScrapper(data['topicItemStats'])
         })
 
         response.on('error', error => {
-            console.error(error)
-            process.exit(1)
+            return new Promise((_, reject) => {
+                reject(error)
+            })
+        })
+    })
+
+    request.on('error', error => {
+        return new Promise((_, reject) => {
+            reject(error)
         })
     })
 
     request.end()
+
+    return new Promise((resolve, reject) => {
+        setTimeout(() => {
+            if (!data) {
+                return reject(ErrorResponse(null, constants.statusCodes.SERVICEUNAVAILABLE, constants.errorCodes.E0001, 'API failed to provide data on time'))
+            }
+            resolve(data)
+        }, 2500)
+    })
+
 }
 
 function topicIdScrapper(array) {

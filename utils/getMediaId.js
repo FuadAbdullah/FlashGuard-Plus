@@ -1,12 +1,14 @@
 const https = require('https')
-const fs = require('fs')
-const {
-    nanoid
-} = require('nanoid')
+const ErrorResponse = require('./errorResponse')
+const constants = require('./constants.js')
 
-function getMediaId({
+async function getMediaId({
     keyword
 }) {
+
+    // Default keyword in case no keyword was provided
+    if (!keyword) keyword = process.env.DEFAULT_KEYWORD || 'The Good Doctor'
+
     const encodedKeyword = encodeURI(keyword)
     const option = {
         hostname: 'www.doesthedogdie.com',
@@ -18,31 +20,41 @@ function getMediaId({
     }
 
     let responseChunk = []
+    let data
 
     const request = https.request(option, (response) => {
         response.on('data', data => {
             responseChunk.push(data)
         }).on('end', async () => {
-            let data = JSON.parse(Buffer.concat(responseChunk).toString())
-            if (!fs.existsSync('./mediaData')) {
-                fs.mkdirSync('./mediaData');
+            data = JSON.parse(Buffer.concat(responseChunk).toString())
+        })
+
+        response.on('error', error => {
+            return new Promise((_, reject) => {
+                reject(error)
+            })
+        })
+    })
+
+    request.on('error', error => {
+        return new Promise((_, reject) => {
+            reject(error)
+        })
+    })
+
+    request.end()
+
+    return new Promise((resolve, reject) => {
+        setTimeout(() => {
+            if (!data) {
+                return reject(ErrorResponse(null, constants.statusCodes.SERVICEUNAVAILABLE, constants.errorCodes.E0001, 'API failed to provide data on time'))
             }
             const relevantInfo = {
                 ...data['items'][0]
             }
-            const title = `${data['items'][0]['name'].replace(/\s/g, '').toLowerCase()}_${data['items'][0]['id']}`
-            fs.writeFileSync(`./mediaData/${title}.json`, JSON.stringify(relevantInfo))
-        })
-
-        response.on('error', error => {
-            console.error(error)
-            process.exit(1)
-        })
+            resolve(relevantInfo)
+        }, 2500)
     })
-
-    String.concat
-
-    request.end()
 }
 
 module.exports = getMediaId

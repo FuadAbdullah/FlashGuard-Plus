@@ -4,14 +4,20 @@
   "description": "Testing doesthedogdie.com API",
   "main": "app.js",
   "scripts": {
-    "start": "env-cmd .env node app.js"
+    "start": "node app.js",
+    "dev": "env-cmd .env nodemon app.js"
   },
   "author": "Diskordlit",
   "license": "ISC",
   "dependencies": {
+    "colors": "^1.4.0",
+    "cors": "^2.8.5",
+    "express": "^4.17.1",
     "nanoid": "^3.1.25"
   },
   "devDependencies": {
-    "env-cmd": "^8.0.2"
+    "env-cmd": "^8.0.2",
+    "morgan": "^1.10.0",
+    "nodemon": "^2.0.12"
   }
 }

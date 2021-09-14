@@ -1,24 +1,24 @@
-const getLatestCategoryData = require('./utils/getLatestCategoryData')
-const getMediaId = require('./utils/getMediaId.js')
-const getShowInfo = require('./utils/getShowInfo.js')
-const getShortDescData = require('./utils/getShortDescData.js')
-const keywordMatchAnalyzer = require('./utils/keywordMatchAnalyzer.js')
+const morgan = require('morgan')
+const express = require('express')
+const cors = require('cors')
+const color = require('colors')
+const errorHandler = require('./middleware/errorHandler.js')
+const app = express()
 
-let keyword, showId, categoryId, categoryString = 'cheese'
+const doesthedogdie = require('./routes/doesthedogdie.js')
 
-const searchObject = {
-    keyword: keyword || 'The Good Doctor',
-    showId: showId || 13397,
-    categoryId: categoryId,
-    categoryString: categoryString
-}
+if (process.env.NODE_ENV === 'development') app.use(morgan('dev'))
 
-// getMediaId(searchObject)
+app.use(express.json())
 
-// getLatestCategoryData(searchObject)
+app.use(cors())
 
-// getShowInfo(searchObject)
+app.use('/api/v1/doesthedogdie', doesthedogdie)
 
-// getShortDescData(searchObject)
+app.use(errorHandler)
 
-// keywordMatchAnalyzer('dogs dying')
+const port = process.env.PORT || 5555
+
+const server = app.listen(port, () => {
+    console.log(`FlashGuard Plus server is running in ${process.env.NODE_ENV} mode on Port ${port}`.white.bgGreen)
+})
