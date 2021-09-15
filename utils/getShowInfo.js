@@ -14,7 +14,7 @@ function getShowInfo({
     // Default categoryId in case no categoryId was provided
     if (!categoryId || categoryId.length === 0) categoryId = process.env.DEFAULT_CATEGORY_ID || [167] // Flashing lights as of 11/09/2021
     // categoryString is optional
-    
+
     const option = {
         hostname: 'www.doesthedogdie.com',
         path: `/media/${showId}`,
@@ -24,41 +24,22 @@ function getShowInfo({
         }
     }
 
-    let responseChunk = []
-    let data
-
-    const request = https.request(option, (response) => {
-        response.on('data', data => {
-            responseChunk.push(data)
-        }).on('end', async () => {
-            data = JSON.parse(Buffer.concat(responseChunk).toString())
-        })
-
-        response.on('error', error => {
-            return new Promise((_, reject) => {
-                reject(error)
+    return new Promise((resolve, reject) => {
+        const request = https.request(option, response => {
+            // response.setEncoding('utf-8')
+            let responseChunk = []
+            response.on('data', data => {
+                responseChunk.push(data)
+            }).on('end', () => {
+                let data = JSON.parse(Buffer.concat(responseChunk).toString())
+                if (categoryString) {
+                    return resolve(categoryKeywordScrapper(data['topicItemStats'], categoryString))
+                }
+                resolve(categoryScrapper(data['topicItemStats'], categoryId))
             })
         })
-    })
-
-    request.on('error', error => {
-        return new Promise((_, reject) => {
-            reject(error)
-        })
-    })
-
-    request.end()
-
-    return new Promise((resolve, reject) => {
-        setTimeout(() => {
-            if (!data) {
-                return reject(ErrorResponse(null, constants.statusCodes.SERVICEUNAVAILABLE, constants.errorCodes.E0001, 'API failed to provide data on time'))
-            }
-            if (categoryString) {
-                return resolve(categoryKeywordScrapper(data['topicItemStats'], categoryString))
-            }
-            resolve(categoryScrapper(data['topicItemStats'], categoryId))
-        }, 3000)
+        request.on('error', error => reject(error))
+        request.end()
     })
 }
 

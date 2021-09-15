@@ -17,41 +17,20 @@ async function getLatestCategoryData({
         }
     }
 
-    let responseChunk = []
-    let data
-
-    const request = https.request(option, (response) => {
-        response.on('data', data => {
-            responseChunk.push(data)
-        }).on('end', async () => {
-            data = JSON.parse(Buffer.concat(responseChunk).toString())
-            data = topicIdScrapper(data['topicItemStats'])
-        })
-
-        response.on('error', error => {
-            return new Promise((_, reject) => {
-                reject(error)
+    return new Promise((resolve, reject) => {
+        const request = https.request(option, response => {
+            // response.setEncoding('utf-8')
+            let responseChunk = []
+            response.on('data', data => {
+                responseChunk.push(data)
+            }).on('end', () => {
+                let data = JSON.parse(Buffer.concat(responseChunk).toString())
+                resolve(topicIdScrapper(data['topicItemStats']))
             })
         })
+        request.on('error', error => reject(error))
+        request.end()
     })
-
-    request.on('error', error => {
-        return new Promise((_, reject) => {
-            reject(error)
-        })
-    })
-
-    request.end()
-
-    return new Promise((resolve, reject) => {
-        setTimeout(() => {
-            if (!data) {
-                return reject(ErrorResponse(null, constants.statusCodes.SERVICEUNAVAILABLE, constants.errorCodes.E0001, 'API failed to provide data on time'))
-            }
-            resolve(data)
-        }, 2500)
-    })
-
 }
 
 function topicIdScrapper(array) {
