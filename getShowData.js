@@ -1,73 +1,104 @@
-var showId, showData, showRisk, yesVotes, noVotes, riskDescription;
+const hostname = 'http://69.4.20.69'
+const port = 5555
 
-function getShowInfo(){
+var showId, showData, showRisk, yesVotes, noVotes, riskDescription
+
+function getShowInfo() {
     setTimeout(() => {
-        chrome.storage.sync.get("showTitle", ({ showTitle }) => {
+        chrome.storage.local.get("showTitle", ({
+            showTitle
+        }) => {
+            fetchShowInformation({
+                keyword: showTitle
+            }).then(result => {
+                fetchTopicInformation({
+                    showId: result['id']
+                }).then(topicData => {
 
-            const urlShowId = 'https://chrome-extension-cors-anywhere.herokuapp.com/https://www.doesthedogdie.com/dddsearch?q=' + showTitle;
+                    showData = topicData[0]['TopicId']
 
-            const fetchHeaders = {
-            headers : {
-                "Accept" : "application/json",
-                "X-API-KEY" : "d670056d6eae327a1c60f652a2476a86"
-            },
-            method:"GET"
-            };
+                    document.getElementById('showTitle').innerHTML = topicData[0]['itemName']
 
-            fetch(urlShowId, fetchHeaders)
-            .then(data=>{return data.json()})
-            .then(res=>{
-            showId = res.items[0].id;
-            console.log(showId);
-            })
-            .catch(error=>console.log(error))
-            .then( () => {
-                const urlShowData = 'https://chrome-extension-cors-anywhere.herokuapp.com/https://www.doesthedogdie.com/media/' + showId;
+                    showRisk = topicData[0]['isYes'] // 1 indicates risky
 
-                fetch(urlShowData, fetchHeaders)
-                .then(data=>{return data.json()})
-                .then(res=>{
-
-                    const metricID = 56; // Flashing Lights ID
-
-                    showData = res.topicItemStats[metricID];
-                    
-                    document.getElementById('showTitle').innerHTML = showTitle;
-
-                    showRisk = res.topicItemStats[metricID].isYes;  // 1 indicates risky
-
-                    if (showRisk == 0) {
+                    if (showRisk === 0) {
                         document.getElementById('showStatus').innerHTML = 'Safe!';
                         document.getElementById('showStatusImg').src = '\\images\\src\\check.png';
-                    } else if (showRisk == 1) {
+                    }
+
+                    if (showRisk === 1) {
                         document.getElementById('showStatus').innerHTML = 'Unsafe!';
                         document.getElementById('showStatus').style.color = '#E04F5F';
                         document.getElementById('showStatusImg').src = '\\images\\src\\danger.png';
                     }
 
-                    yesVotes = res.topicItemStats[metricID].yesSum;
-                    noVotes = res.topicItemStats[metricID].noSum;
+                    yesVotes = topicData[0]['yesSum'];
+                    noVotes = topicData[0]['noSum'];
+                    totalVotes = yesVotes + noVotes
 
-                    if (yesVotes > noVotes){
-                        document.getElementById('showSum').innerHTML = `${yesVotes} / ${yesVotes + noVotes} votes`;
+                    if (yesVotes > noVotes) {
+                        document.getElementById('showSum').innerHTML = `${yesVotes} / ${totalVotes} votes`;
                     } else {
-                        document.getElementById('showSum').innerHTML = `${noVotes} / ${yesVotes + noVotes} votes`;
+                        document.getElementById('showSum').innerHTML = `${noVotes} / ${totalVotes} votes`;
                     }
 
-                    riskDescription = res.topicItemStats[metricID].comment;
+                    riskDescription = topicData[0]['comment'];
                     document.getElementById('showComment').innerHTML = riskDescription;
-                            
+
                 })
-                .catch(() => {
-                    document.getElementById('showStatus').innerHTML = 'Unavailable';
-                    document.getElementById('showStatusImg').src = '\\images\\src\\not-found.png';
-                    document.getElementById('showStatus').style.color = '#FDB62F';
-                    document.getElementById('showSum').innerHTML = '';
-                    document.getElementById('showComment').innerHTML = "We don't appear to have information on this show at the moment. \n If you have watched this, please leave a review on our site!";
-                })
+            }).catch(rejected => {
+                console.log(rejected)
+                document.getElementById('showStatus').innerHTML = 'Unavailable';
+                document.getElementById('showStatusImg').src = '\\images\\src\\not-found.png';
+                document.getElementById('showStatus').style.color = '#FDB62F';
+                document.getElementById('showSum').innerHTML = '';
+                document.getElementById('showComment').innerHTML = "We don't appear to have information on this show at the moment. \n If you have watched this, please leave a review on our site!";
             })
-        });
-    }, 500);
+        })
+    }, 500)
 }
 
-getShowInfo();
+getShowInfo()
+
+async function fetchTopicInformation({
+    showId,
+    categoryId,
+    categoryString
+}) {
+
+    const queryURL = `${hostname}:${port}/api/v1/doesthedogdie/show-info?showId=${showId || null}&categoryId=${categoryId || null}&categoryString=${categoryString || null}`;
+
+    const queryHeader = {
+        headers: {
+            "Accept": "application/json"
+        },
+        method: "GET"
+    }
+
+    const topicData = async () => {
+        return await fetch(queryURL, queryHeader).then(data => data.json()).catch(rejected => rejected.json())
+    }
+
+    return await topicData()
+
+}
+
+async function fetchShowInformation({
+    keyword
+}) {
+    const queryURL = `${hostname}:${port}/api/v1/doesthedogdie/media-id?keyword=${keyword || null}`;
+
+    const queryHeader = {
+        headers: {
+            "Accept": "application/json"
+        },
+        method: "GET"
+    };
+
+    const showId = async () => {
+        let decodedData = await fetch(queryURL, queryHeader).then(data => data.json()).catch(rejected => rejected.json())
+        return decodedData
+    }
+
+    return await showId()
+}

@@ -9,12 +9,11 @@ async function fetchData(){
 
 var showTitle;
 
-function getShowName(){
-    
+function getShowName() {
     showTitle = document.querySelector("div[class=about-header] > h3 > strong").innerHTML; //get show name
     
     console.log(`Show Title: ${showTitle}`);
-    chrome.storage.sync.set({ showTitle });
+    chrome.storage.local.set({ showTitle });
 }
 
 fetchData();
