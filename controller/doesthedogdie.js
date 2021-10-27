@@ -8,7 +8,7 @@ const getShowInfo = require('../utils/getShowInfo.js')
 
 exports.getLatestCategoryData = asyncHandler(async (req, res, next) => {
     try {
-        await getLatestCategoryData(req.query).then(result => {
+        getLatestCategoryData(req.query).then(result => {
             res.status(constants.statusCodes.OK).json(result)
         })
     } catch (error) {
@@ -18,7 +18,7 @@ exports.getLatestCategoryData = asyncHandler(async (req, res, next) => {
 
 exports.getShortDescData = asyncHandler(async (req, res, next) => {
     try {
-        await getShortDescData(req.query).then(result => {
+        getShortDescData(req.query).then(result => {
             res.status(constants.statusCodes.OK).json(result)
         })
     } catch (error) {
@@ -28,7 +28,7 @@ exports.getShortDescData = asyncHandler(async (req, res, next) => {
 
 exports.getMediaId = asyncHandler(async (req, res, next) => {
     try {
-        await getMediaId(req.query).then(result => {
+        getMediaId(req.query).then(result => {
             res.status(constants.statusCodes.OK).json(result)
         })
     } catch (error) {
@@ -38,7 +38,7 @@ exports.getMediaId = asyncHandler(async (req, res, next) => {
 
 exports.getShowInfo = asyncHandler(async (req, res, next) => {
     try {
-        await getShowInfo(req.query).then(result => {
+        getShowInfo(req.query).then(result => {
             res.status(constants.statusCodes.OK).json(result)
         })
     } catch (error) {
